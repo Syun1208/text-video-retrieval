@@ -1,1 +1,6 @@
 data/news/
+
+PLIP/data/*
+PLIP/checkpoints/*
+token.txt
+PLIP/__pycache__
