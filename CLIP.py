@@ -19,7 +19,7 @@ sys.path.insert(0, WORK_DIR)
 
 def main():
     data = os.path.join(ROOT, 'data/news')
-    features = os.path.join(WORK_DIR, 'features')
+    features = os.path.join(ROOT, 'models/clip_features')
     os.system(f'rm -rf {features}/*')
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(device)
@@ -36,13 +36,14 @@ def main():
               with torch.no_grad():
                   image_feats = model.encode_image(image)
 
-            image_feats /= image_feats.norm(dim=-1, keepdim=True)
-            image_feats = image_feats.detach().cpu().numpy().astype(np.float16).flatten() 
+              image_feats /= image_feats.norm(dim=-1, keepdim=True)
+              image_feats = image_feats.detach().cpu().numpy().astype(np.float16).flatten() 
 
-            re_feats.append(image_feats)
-
+              re_feats.append(image_feats)
+            if not os.path.exists(os.path.join(features, vd_path)):
+                os.makedirs(os.path.join(features, vd_path))
             name_npy = keyframe.split('/')[-1]
-            outfile = f'{features}/{name_npy}.npy'
+            outfile = f'{features}/{vd_path}/{name_npy}.npy'
             np.save(outfile, re_feats)
 
 if __name__ == '__main__':
