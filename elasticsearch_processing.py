@@ -13,13 +13,12 @@ import re
 import tqdm
 import sys
 from pathlib import Path
-from lip_processing.PLIP.plip_processing import parse_args
-from lip_processing.PLIP.plip_processing import Create_PLIP_Model
 from transformers import BertTokenizer
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import cityblock, mahalanobis
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search
 from langdetect import detect
 from translate_processing import Translation
 
@@ -33,6 +32,10 @@ ROOT = Path(os.path.abspath(ROOT))  # relative
 # main work directory
 WORK_DIR = os.path.dirname(ROOT)
 
+        
+ELASTIC_PASSWORD = 'v54U0ClMTS5kgiIWCFlnSdix'
+CLOUD_ID = 'aic2023:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyRlOGRhNmQ3ODBmZDk0OTFiOTI2NDg3MGU2MmY4OWJiNyRiOGE4MTVjODRmNWM0MzliOTk3N2E3MGFmZWE1MTM3Zg=='
+ES_ENDPOINT = f'https://aic2023.es.us-central1.gcp.cloud.es.io'
 
 def time_complexity(func):
     def warp(*args, **kwargs):
@@ -77,30 +80,24 @@ class Similarity:
 
 
 class ElasticSearch(Translation):
-    def __init__(self, folder_features, annotation, mode='plip', es_pwd='fzO062HMgWRLoiFuSe05jDft', cloud_id='aic2023:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyRlOGRhNmQ3ODBmZDk0OTFiOTI2NDg3MGU2MmY4OWJiNyRiOGE4MTVjODRmNWM0MzliOTk3N2E3MGFmZWE1MTM3Zg==') -> None:
+    def __init__(self, folder_features, annotation, mode='plip') -> None:
         super(ElasticSearch, self).__init__(mode='googletrans')
-        
-        ELASTIC_PASSWORD = es_pwd
-
-        # Found in the 'Manage Deployment' page
-        CLOUD_ID = cloud_id
 
         # Create the client instance
-        self.client = Elasticsearch(
-            hosts=['https://localhost:1208'],
+        self.es = Elasticsearch(
             cloud_id=CLOUD_ID,
-            basic_auth=("elastic", ELASTIC_PASSWORD)
+            http_auth=("elastic", ELASTIC_PASSWORD)
         )
 
         # Successful response!
-        self.client.info()
+        self.es.info()
 
         self.folder_features = folder_features # folder feature path
         self.keyframes_id = self.load_json_file(annotation) # read keyframes_id.json
         # configure plip mode
         self.mode = mode
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.args_plip = parse_args()
+        # self.args_plip = parse_args()
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         # query dictionary in elasticsearch
         self.query = {
@@ -124,18 +121,27 @@ class ElasticSearch(Translation):
         with open(json_path, 'r') as f:
             js = json.loads(f.read())
         return js
-    
+
+    def reset_indexing(self):
+        s = Search(using=self.es, index='index_features').query('match_all')  
+        response = s.delete()
+        print('Clear database sucessfully !')
+
+
+
     def indexing(self):
-        for values in tqdm.tqdm(self.keyframes_id.values(),desc='Indexing features to server elasticsearh'):
+        for values in tqdm.tqdm(self.keyframes_id.values(),desc='Indexing features to server elasticsearch'):
             image_path = values["image_path"]
             image_path = image_path.replace("Database", 'data/news')
             video_name = image_path.split('/')[-2] + '.npy'
+            if video_name == 'C00_V0001.npy':
+               break
             video_id = re.sub('_V\d+', '', image_path.split('/')[-2])
             batch_name = image_path.split('/')[-3].split('_')[-1]
             lip_name = f"models/{self.mode}_features/KeyFrames{video_id}_{batch_name}"
-            feat_path = os.path.join(WORK_DIR, lip_name, video_name)
+            feat_path = os.path.join(ROOT, lip_name, video_name)
             feats = np.load(feat_path)
-            ids = os.listdir(re.sub('/\d+.jpg','',os.path.join(WORK_DIR,image_path)))
+            ids = os.listdir(re.sub('/\d+.jpg','',os.path.join(ROOT,image_path)))
             ids = sorted(ids, key=lambda x:int(x.split('.')[0]))
             id = ids.index(image_path.split('/')[-1])
             feat = feats[id]
@@ -147,6 +153,7 @@ class ElasticSearch(Translation):
             self.es.index(index='index_features', document=document, id=id)
 
 
+
     def caption_to_tokens(self, caption):
         result = self.tokenizer(caption, padding="max_length", max_length=64, truncation=True, return_tensors='pt')
         token, mask = result["input_ids"], result["attention_mask"]
@@ -154,33 +161,35 @@ class ElasticSearch(Translation):
 
     def get_mode_extract(self, data, method='text'):
         '''
-        Input: data -> text or image
+        Input: data = {text | image}
         return vector embedding
         '''
-        data_embedding = {}
-        
-        if self.mode == 'plip':
-            if method == 'text':
-                model = Create_PLIP_Model(self.args_plip).to(self.device)
-                token, mask = self.caption_to_tokens(data)
-                with torch.no_grad():
-                    text_feat = model.get_text_global_embedding(token,mask)
-                data_embedding[method] = text_feat.cpu().detach().numpy().astype(np.float32).flatten()
-        
-        elif self.mode == 'clip':
-            if method == 'text':
-                if detect(text) == 'vi':
-                    text = Translation.__call__(self, text)
 
-                text = clip.tokenize([text]).to(self.__device)
+        
+        if method == 'text':
+            if self.mode == 'plip':
+                pass
+                # model = Create_PLIP_Model(self.args_plip).to(self.device)
+                # token, mask = self.caption_to_tokens(data)
+                # with torch.no_grad():
+                #     text_feat = model.get_text_global_embedding(token,mask)
+                # data_embedding[method] = text_feat.cpu().detach().numpy().astype(np.float32).flatten()
+        
+            elif self.mode == 'clip':
+                if detect(data) == 'vi':
+                    text = Translation.__call__(self, data)
+                else:
+                    pass # grammar detection and correction
+                text = clip.tokenize([text]).to(self.device)
                 model, preprocess = clip.load("ViT-B/16", device=self.device)  
-                data_embedding[method]= self.model.encode_text(text).cpu().detach().numpy().astype(np.float32)
-            
+                data_embedding= model.encode_text(text).cpu().detach().numpy().astype(np.float32)
+
         elif method == 'image':
             result = self.es.get(index='index_features', id=data)
-            data_embedding[method] = np.array(result['_source']['vector'])
+            data_embedding = np.array(result['_source']['vector'])
 
-        return data_embedding[method]
+
+        return data_embedding
     
     def get_search_results(self):
         result = self.es.search(index='index_features', body=self.query)
@@ -200,9 +209,9 @@ class ElasticSearch(Translation):
 
     @time_complexity
     def text_search(self, text, k):
-        text_features = self.get_mode_extract(text, mode='text')
+        text_features = self.get_mode_extract(text, method='text')
         self.query['size'] = k
-        self.query['query_vector'] = text_features.tolist()
+        self.query['query']['script_score']['script']['params']['query_vector'] = text_features.tolist()
         images_id, scores, infos_query, image_paths = self.get_search_results()
         return images_id, scores, infos_query, image_paths
     
@@ -214,7 +223,7 @@ class ElasticSearch(Translation):
     def image_search(self, image_id, k):
         image_features = self.get_mode_extract(image_id, method='image')
         self.query['size'] = k
-        self.query['query_vector'] = image_features.tolist()
+        self.query['query']['script_score']['script']['params']['query_vector'] = image_features.tolist()
         images_id, scores, infos_query, image_paths = self.get_search_results()
         return images_id, scores, infos_query, image_paths
     
@@ -247,19 +256,17 @@ class ElasticSearch(Translation):
 
 def main():
     #define useful path
-    data_path = os.path.join(WORK_DIR, 'data')
+    data_path = os.path.join(ROOT, 'data')
     model_path = os.path.join(WORK_DIR , 'models')
     keyframes_id_path = os.path.join(data_path, 'dicts/keyframes_id.json')
     folder_features = os.path.join(model_path, 'plip_features')
     # Create an object vector search
-    es = ElasticSearch(folder_features, keyframes_id_path, mode='plip')
+    es = ElasticSearch(folder_features, keyframes_id_path, mode='clip')
+    es.es.info()
+    es.reset_indexing()
     es.indexing()
     # text search: text2image, text, asr2text, ocr
-    text = 'Người nghệ nhân đang tô màu cho chiếc mặt nạ một cách tỉ mỉ. \
-      Xung quanh ông là rất nhiều những chiếc mặt nạ. \
-      Người nghệ nhân đi đôi dép tổ ong rất giản dị. \
-      Sau đó là hình ảnh quay cận những chiếc mặt nạ. \
-      Loại mặt nạ này được gọi là mặt nạ giấy bồi Trung thu.'
+    text = 'Áo đen đeo khẩu trang màu đen'
     images_id, scores, infos_query, image_paths = es.text_search(text, k=10)
     es.show_images(image_paths)
     # image search: image2text, image, asr2text, ocr
