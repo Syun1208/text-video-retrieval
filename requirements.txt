@@ -1,4 +1,13 @@
 elasticsearch
 clip
-ftfy regex tqdm
+ftfy 
+regex 
+tqdm
+transformers
+langdetect
 git+https://github.com/openai/CLIP.git
+googletrans==4.0.0-rc1
+pyvi
+underthesea
+translate
+elasticsearch-dsl
