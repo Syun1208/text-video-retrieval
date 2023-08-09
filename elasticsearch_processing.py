@@ -102,29 +102,13 @@ class ElasticSearch(Translation):
         # query dictionary in elasticsearch
 
         self.query = {
-            "query": {
-              "script_score": {
-                "query" : {
-                  "bool" : {
-                    "filter" : {
-                      "range" : {
-                        "price" : {
-                          "gte": 1000
-                        }
-                      }
-                    }
-                  }
-                },
-                "script": {
-                  "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
-                  "params": {
-                    "query_vector": []
-                  }
-                }
-              }
-            },
-            "size": 10
+          "knn": {
+            "field": "vector",
+            "query_vector": [],
+            "k": 10,
+            "num_candidates": 1000
           }
+        }
 
 
     def load_json_file(self, json_path: str):
@@ -139,34 +123,25 @@ class ElasticSearch(Translation):
 
     def create_an_index(self, VECTOR_DIMENSION = 512):
         index_settings = {
-              "mappings": {
-                  "properties": {
-                      "vector": {
-                          "type": "dense_vector",
-                          "dims": VECTOR_DIMENSION  # Specify the dimension of your vector
-                      },
-                      "title": {
-                          "type": "text"
-                      },
-                      "abstract": {
-                          "type": "text"
-                      }
-                  }
-              }
+          "mappings": {
+            "properties": {
+              "vector": {
+                "type": "dense_vector",
+                "element_type": "float",
+                "dims": VECTOR_DIMENSION,
+                "index": True,
+                "similarity": "cosine"
+              },
+            }
           }
-        self.es.indices.create(index=INDEX_NAME)
+        }
+        self.es.indices.create(index=INDEX_NAME, body=index_settings)
         print('Create indexing sucessfully !')
 
     def delete_an_index(self):
         self.es.indices.delete(index=INDEX_NAME)
         print('Delete indexing sucessfully !')
 
-    # def test_indexing(self):
-    #   for i in range(1, 10):
-    #       document = {
-    #           'vector': np.random.randn(1,512).tolist()[0],
-    #       }
-    #       self.es.index(index=INDEX_NAME, document=document, id=i)
 
     def indexing(self):
         for values in tqdm.tqdm(self.keyframes_id.values(),desc='Indexing features to server elasticsearch'):
@@ -177,8 +152,8 @@ class ElasticSearch(Translation):
                break
             video_id = re.sub('_V\d+', '', image_path.split('/')[-2])
             batch_name = image_path.split('/')[-3].split('_')[-1]
-            lip_name = f"models/{self.mode}_features/KeyFrames{video_id}_{batch_name}"
-            feat_path = os.path.join(ROOT, lip_name, video_name)
+            lip_name = f"{self.mode}_features/KeyFrames{video_id}_{batch_name}"
+            feat_path = os.path.join(self.folder_features, lip_name, video_name)
             feats = np.load(feat_path)
             ids = os.listdir(re.sub('/\d+.jpg','',os.path.join(ROOT,image_path)))
             ids = sorted(ids, key=lambda x:int(x.split('.')[0]))
@@ -220,9 +195,13 @@ class ElasticSearch(Translation):
                     text = Translation.__call__(self, data)
                 else:
                     pass # grammar detection and correction
+                print('Translated text: ', text)
                 text = clip.tokenize([text]).to(self.device)
                 model, preprocess = clip.load("ViT-B/16", device=self.device)  
-                data_embedding= model.encode_text(text).cpu().detach().numpy().astype(np.float32)
+                with torch.no_grad():
+                      data_embedding= model.encode_text(text)
+                data_embedding /= data_embedding.norm(dim=-1, keepdim=True)
+                data_embedding = data_embedding.detach().cpu().numpy().astype(np.float16).flatten()
 
         elif method == 'image':
             result = self.es.get(index=INDEX_NAME, id=data)
@@ -246,13 +225,15 @@ class ElasticSearch(Translation):
 
         infos_query = list(map(self.keyframes_id.get, list(images_id)))
         image_paths = [info['image_path'] for info in infos_query]
+        image_paths = list(map(lambda x: x.replace("Database", 'data/news'), image_paths))
         return images_id, scores, infos_query, image_paths
 
-
+    @time_complexity
     def text_search(self, text, k):
         text_features = self.get_mode_extract(text, method='text')
-        self.query['size'] = k
-        self.query['query']['script_score']['script']['params']['query_vector'] = text_features.tolist()
+        self.query['knn']['k'] = k
+        self.query['knn']['query_vector'] = text_features.tolist()
+        # print('Text features lenght: ', len(text_features.tolist()))
         images_id, scores, infos_query, image_paths = self.get_search_results()
         return images_id, scores, infos_query, image_paths
     
@@ -263,28 +244,34 @@ class ElasticSearch(Translation):
     @time_complexity
     def image_search(self, image_id, k):
         image_features = self.get_mode_extract(image_id, method='image')
-        self.query['size'] = k
-        self.query['query']['script_score']['script']['params']['query_vector'] = image_features.tolist()
+        self.query['knn']['k'] = k
+        self.query['knn']['query_vector'] = image_features.tolist()
+        # print('Image lenghts: ', len(image_features.tolist()))
         images_id, scores, infos_query, image_paths = self.get_search_results()
         return images_id, scores, infos_query, image_paths
     
-    def show_images(self, image_paths):
+    def show_images(self, image_paths, method='text', text=''):
         fig = plt.figure(figsize=(15, 10))
+        if method == 'text':
+            plt.title(text)
         columns = int(math.sqrt(len(image_paths)))
-        rows = int(np.ceil(len(image_paths)/columns))
-        folder_save = os.path.join(WORK_DIR, 'results')
+        rows = int(np.ceil(len(image_paths) / columns))
+        folder_save = os.path.join(ROOT, 'results')
         if not os.path.exists(folder_save):
             os.makedirs(folder_save)
 
-        for i in range(1, columns*rows +1):
-            img = plt.imread(image_paths[i - 1])
-            ax = fig.add_subplot(rows, columns, i)
-            ax.set_title('/'.join(image_paths[i - 1].split('/')[-3:]))
+        method_save = os.path.join(folder_save, method)
+        if not os.path.exists(method_save):
+            os.makedirs(method_save)
+        for i in range(len(image_paths)):
+            img = plt.imread(os.path.join(ROOT, image_paths[i]))
+            ax = fig.add_subplot(rows, columns, i + 1)  
+            ax.set_title('/'.join(image_paths[i].split('/')[-3:]))
 
             plt.imshow(img)
             plt.axis("off")
-            plt.savefig(img, os.path.join(folder_save, image_paths))
-        
+
+        plt.savefig(os.path.join(method_save, method + '_retrieval.jpg'))
         plt.show()
     
     def submit():
@@ -298,9 +285,8 @@ class ElasticSearch(Translation):
 def main():
     #define useful path
     data_path = os.path.join(ROOT, 'data')
-    model_path = os.path.join(WORK_DIR , 'models')
+    folder_features = os.path.join(ROOT, 'models')
     keyframes_id_path = os.path.join(data_path, 'dicts/keyframes_id.json')
-    folder_features = os.path.join(model_path, 'plip_features')
 
 
     # Create an object vector search
@@ -315,20 +301,22 @@ def main():
 
 
     # Indexing to elastic database
-    es.delete_an_index()
-    es.create_an_index()
-    es.indexing()
+    # es.delete_an_index()
+    # es.create_an_index()
+    # es.indexing()
+    response = es.es.get(index=INDEX_NAME, id=1)
+
 
 
     # text search: text2image, text, asr2text, ocr
-    text = 'Áo đen đeo khẩu trang màu đen'
+    text = 'MC dẫn chương trình'
     images_id, scores, infos_query, image_paths = es.text_search(text, k=10)
-    es.show_images(image_paths)
-
+    es.show_images(image_paths, method='text')
+ 
 
     # image search: image2text, image, asr2text, ocr
     images_id, scores, infos_query, image_paths = es.image_search(image_id=2, k=10)
-    es.show_images(image_paths)
+    es.show_images(image_paths, text=text, method='image')
 
 
     # video search: image2text, image, asr2text, ocr
