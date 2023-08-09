@@ -100,28 +100,31 @@ class ElasticSearch(Translation):
         # self.args_plip = parse_args()
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         # query dictionary in elasticsearch
-        # self.script_query = {
-        #     "script_score": {
-        #         "query": {"match_all": {}},
-        #         "script": {
-        #             "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
-        #             "params": {"query_vector": []}
-        #         }
-        #     }
-        # }
+
         self.query = {
             "query": {
-                "script_score": {
-                    "query": {"match_all": {}},
-                    "script": {
-                        "source": "dotProduct(params.query_vector, 'vector') + 1.0",
-                        "params": {"query_vector": []}
+              "script_score": {
+                "query" : {
+                  "bool" : {
+                    "filter" : {
+                      "range" : {
+                        "price" : {
+                          "gte": 1000
+                        }
+                      }
                     }
+                  }
                 },
-            "size": 5
-            }
-        }
-
+                "script": {
+                  "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
+                  "params": {
+                    "query_vector": []
+                  }
+                }
+              }
+            },
+            "size": 10
+          }
 
 
     def load_json_file(self, json_path: str):
@@ -134,8 +137,7 @@ class ElasticSearch(Translation):
         response = s.delete()
         print('Clear database sucessfully !')
 
-    def create_an_index(self):
-        VECTOR_DIMENSION = 512
+    def create_an_index(self, VECTOR_DIMENSION = 512):
         index_settings = {
               "mappings": {
                   "properties": {
@@ -159,6 +161,13 @@ class ElasticSearch(Translation):
         self.es.indices.delete(index=INDEX_NAME)
         print('Delete indexing sucessfully !')
 
+    # def test_indexing(self):
+    #   for i in range(1, 10):
+    #       document = {
+    #           'vector': np.random.randn(1,512).tolist()[0],
+    #       }
+    #       self.es.index(index=INDEX_NAME, document=document, id=i)
+
     def indexing(self):
         for values in tqdm.tqdm(self.keyframes_id.values(),desc='Indexing features to server elasticsearch'):
             image_path = values["image_path"]
@@ -178,7 +187,7 @@ class ElasticSearch(Translation):
             feat = feat.astype(np.float32).reshape(1,-1)
             # add feature to elasticsearch server
             document = {
-                'vector': feat.tolist(),
+                'vector': feat.tolist()[0],
             }
             self.es.index(index=INDEX_NAME, document=document, id=id)
             # bulk(self.es, document, index=INDEX_NAME)
@@ -193,7 +202,7 @@ class ElasticSearch(Translation):
     def get_mode_extract(self, data, method='text'):
         '''
         Input: data = {text | image}
-        return vector embedding
+        Return: vector embedding
         '''
 
         
@@ -235,15 +244,15 @@ class ElasticSearch(Translation):
             images_id.append(image_id)
             scores.append(score)
 
-        infos_query = list(map(self.id2img_fps.get, list(images_id)))
+        infos_query = list(map(self.keyframes_id.get, list(images_id)))
         image_paths = [info['image_path'] for info in infos_query]
         return images_id, scores, infos_query, image_paths
 
 
     def text_search(self, text, k):
         text_features = self.get_mode_extract(text, method='text')
-        self.query['query']['size'] = k
-        self.query['query']['function_score']['script_score']['script']['params']['query_vector'] = text_features.tolist()
+        self.query['size'] = k
+        self.query['query']['script_score']['script']['params']['query_vector'] = text_features.tolist()
         images_id, scores, infos_query, image_paths = self.get_search_results()
         return images_id, scores, infos_query, image_paths
     
@@ -254,8 +263,8 @@ class ElasticSearch(Translation):
     @time_complexity
     def image_search(self, image_id, k):
         image_features = self.get_mode_extract(image_id, method='image')
-        self.query['query']['size'] = k
-        self.query['query']['function_score']['script_score']['script']['params']['query_vector'] = image_features.tolist()
+        self.query['size'] = k
+        self.query['query']['script_score']['script']['params']['query_vector'] = image_features.tolist()
         images_id, scores, infos_query, image_paths = self.get_search_results()
         return images_id, scores, infos_query, image_paths
     
@@ -305,28 +314,11 @@ def main():
           print(e)
 
 
-    # # Indexing to elastic database
-    # es.delete_an_index()
-    # es.create_an_index()
-    # es.indexing()
-    response = es.es.get(index=INDEX_NAME, id=1)
-    print(len(response['_source']['vector'][0]))
+    # Indexing to elastic database
+    es.delete_an_index()
+    es.create_an_index()
+    es.indexing()
 
-    query = {
-      "query": {
-          "script_score": {
-              "query": {"match_all": {}},
-              "script": {
-                  "source": "dotProduct(params.query_vector, 'vector') + 1.0",
-                  "params": {"query_vector": np.random.randn((512, )).tolist()}
-              }
-          }
-      },
-      "size": 5  # This line should be outside the "script_score" query
-  }
-
-    result = es.es.search(index=INDEX_NAME, body=query)
-    print(result)
 
     # text search: text2image, text, asr2text, ocr
     text = 'Áo đen đeo khẩu trang màu đen'
@@ -335,7 +327,7 @@ def main():
 
 
     # image search: image2text, image, asr2text, ocr
-    images_id, scores, infos_query, image_paths = es.image_search(image_id='2', k=10)
+    images_id, scores, infos_query, image_paths = es.image_search(image_id=2, k=10)
     es.show_images(image_paths)
 
 
