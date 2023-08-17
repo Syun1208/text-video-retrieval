@@ -1,0 +1,42 @@
+elasticsearch
+clip
+ftfy 
+regex 
+tqdm
+transformers
+langdetect
+git+https://github.com/openai/CLIP.git
+googletrans==4.0.0-rc1
+pyvi
+underthesea
+translate
+elasticsearch-dsl
+clu==0.0.7
+timm==0.4.12
+tensorflow_addons
+jax[tpu]==0.3.15 
+jaxlib==0.3.15 
+flax==0.5.3 -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+absl-py 
+cached_property 
+gin-config 
+numpy 
+seqio-nightly 
+tensorstore
+# compatible with jax=0.3.15
+orbax==0.0.12
+chex==0.1.6
+
+# sudo pip3 uninstall -y tensorflow
+# sudo pip3 uninstall -y tensorflow  # do it twice in case of any duplicated installation
+# sudo pip3 uninstall -y tf-nightly
+tensorflow==2.8.0
+tensorflow-text==2.7.3
+pandas==1.4.4
+transformers==4.21.3
+numpy==1.23.3
+tensorrt
+git+https://github.com/google-research/vision_transformer
+uvicorn[standard]
+fastapi
+salesforce-lavis

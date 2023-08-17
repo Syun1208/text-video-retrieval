@@ -1,0 +1,11 @@
+data/
+models/
+results/
+utils/LiT-B16B.npz
+utils/__pycache__/
+utils/lip_processing/LiT-B16B.npz
+utils/lip_processing/PLIP/__pycache__/
+utils/lip_processing/PLIP/checkpoints/PLIP_RN50.pth.tar
+utils/lip_processing/PLIP/__pycache__/
+__pycache__/
+ utils/lip_processing/__pycache__/
