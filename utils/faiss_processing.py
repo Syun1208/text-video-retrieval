@@ -68,9 +68,9 @@ class FaissSearch(Translation):
     @time_complexity
     def text_search(self, text, k):
         text_features = self.get_mode_extract(text, method='text')
-        text_features = text_features.reshape(1, -1)  # Reshape to 2D array
-        gpu_index = faiss.index_cpu_to_all_gpus(self.cpu_index)
-        scores, idx_image = gpu_index.search(text_features, k=k)
+        # text_features = text_features.reshape(1, -1)  # Reshape to 2D array
+        # gpu_index = faiss.index_cpu_to_all_gpus(self.cpu_index)
+        scores, idx_image = self.cpu_index.search(text_features, k=k)
 
         idx_image = idx_image.flatten()
 
@@ -83,8 +83,8 @@ class FaissSearch(Translation):
     @time_complexity
     def image_search(self, image_id, k):
         query_feats = self.cpu_index.reconstruct(image_id).reshape(1,-1)
-        gpu_index = faiss.index_cpu_to_all_gpus(self.cpu_index)
-        scores, idx_image = gpu_index.search(query_feats, k=k)
+        # gpu_index = faiss.index_cpu_to_all_gpus(self.cpu_index)
+        scores, idx_image = self.cpu_index.search(query_feats, k=k)
         idx_image = idx_image.flatten()
 
         image_paths = [self.keyframes_id[str(item)]['image_path'] for item in list(idx_image)]
@@ -100,9 +100,9 @@ class FaissSearch(Translation):
         if method == 'text':
             if detect(data) == 'vi':
                 text = Translation.__call__(self, data)
-            print('Translated text: ', text)
             if self.mode == 'lit':
                 os.system('TF_CPP_MIN_LOG_LEVEL=0')
+                print('Translated text: ', text)
                 model_name = 'LiT-B16B'
                 lit_model = models.get_model(model_name)
                 tokenizer = lit_model.get_tokenizer()
@@ -129,9 +129,9 @@ class FaissSearch(Translation):
 
     def indexing(self, VECTOR_DIMENSIONS):
         self.cpu_index = faiss.IndexFlatIP(VECTOR_DIMENSIONS)
-        gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
-            self.cpu_index
-        )
+        # gpu_index = faiss.index_cpu_to_all_gpus(  # build the index
+        #     self.cpu_index
+        # )
         for values in tqdm.tqdm(self.keyframes_id.values(),desc='Indexing features to faiss'):
             image_path = values["image_path"]
             image_path = image_path.replace("Database", 'data/news')
@@ -149,8 +149,8 @@ class FaissSearch(Translation):
             feat = feats[id]
             feat = feat.astype(np.float32).reshape(1,-1)
             # add feature to faiss
-            gpu_index.add(feat)
-        self.cpu_index = faiss.index_gpu_to_cpu(gpu_index)
+            self.cpu_index.add(feat)
+        # self.cpu_index = faiss.index_gpu_to_cpu(gpu_index)
         faiss.write_index(self.cpu_index, os.path.join(WORK_DIR, 'models', f'faiss_{self.mode}.bin'))
         print('Saved to: ', os.path.join(WORK_DIR, 'models', f'faiss_{self.mode}.bin'))
 

@@ -48,17 +48,16 @@ def image_to_base64(image):
 
 @app.post('/')
 async def health_check():
-    return {"message": 'Hello anh Nong !'}
+    return {"message": 'Hello anh Long !'}
 
 @app.post('/text_search', response_class=HTMLResponse)
 async def text_search(request: Request):
-    # text from user
-    text = request.text
+
     list_image_encoded = []
     # Create an object vector search
     faiss_search = FaissSearch(mode=request.mode_search)
     faiss_search.load_bin_file()
-    scores, images_id, image_paths = faiss_search.text_search(text, k=9)
+    scores, images_id, image_paths = faiss_search.text_search(request.text, request.k)
     # Encoder images to base64
     for image_path in image_paths:
         image = cv2.imread(WORK_DIR, image_path)
@@ -72,12 +71,12 @@ async def text_search(request: Request):
 @app.post('/image_search', response_class=HTMLResponse)
 async def image_search(request: Request):
     # text from user
-    image_id = request.image_id
+
     list_image_encoded = []
     # Create an object vector search
     faiss_search = FaissSearch(mode=request.mode_search)
     faiss_search.load_bin_file()
-    scores, images_id, image_paths = faiss_search.image_search(image_id=image_id, k=9)
+    scores, images_id, image_paths = faiss_search.image_search(image_id=request.image_id, k=request.k)
     # Encoder images to base64
     for image_path in image_paths:
         image = cv2.imread(WORK_DIR, image_path)
