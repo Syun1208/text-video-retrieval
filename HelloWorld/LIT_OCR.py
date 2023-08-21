@@ -10,10 +10,11 @@ from langdetect import detect
 
 
 class Faiss_OCR():
-    def __init__(self, bin_file: str, info_file: str , mode = "lit"):
+    def __init__(self, bin_file: str, info_file: str , root_img:str, mode = "lit"):
         self.df_ocr = pd.read_csv(info_file, delimiter=",", header=None)
         self.translate = Translation()
         self.index = self.load_bin_file(bin_file)
+        self.root_img = root_img
 
         if mode == "lit":
             os.system('TF_CPP_MIN_LOG_LEVEL=0')
@@ -29,7 +30,7 @@ class Faiss_OCR():
     def convert_idx_to_path(self,idx_image):
         path_arr = []
         for idx in idx_image:
-            path = f"{self.df_ocr[0][idx]}/{self.process_name_img(self.df_ocr[1][idx])}.jpg"
+            path = f"{self.root_img}/{self.df_ocr[0][idx]}/{self.process_name_img(self.df_ocr[1][idx])}.jpg"
             path_arr.append(path)
         return path_arr
 
@@ -50,7 +51,7 @@ class Faiss_OCR():
         return arr_path
     
 def main():
-    faiss_search = Faiss_OCR(bin_file='data/models/faiss_LIT_OCR_cosine.bin', info_file = "data/OCR_ASR/info_ocr_loc.txt")
+    faiss_search = Faiss_OCR(bin_file='data/models/faiss_LIT_OCR_cosine.bin', info_file = "data/OCR_ASR/info_ocr_loc.txt", root_img = "data/KeyFramesC00_V00")
     text = "tphcm trẻ mắc bệnh tay chân miệng tăng gấp lần trong một tháng"
     idx_image = faiss_search.text_search(text, k=9)
     print(idx_image)
