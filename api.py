@@ -52,7 +52,7 @@ class UserRequest(BaseModel):
     mode_search: str
 
 
-class MultiProcess(Thread):
+class MultiProcess(Process):
     def __init__(self, target=None, args=None):
         super(MultiProcess, self).__init__()
         self.target = target
@@ -62,6 +62,7 @@ class MultiProcess(Thread):
 
     def run(self):
         self.scores, self.idx_image, self.image_paths = self.target(self.text, self.k)
+
 def multi_processing(text, k):
     list_image_paths = []
     list_scores = []
