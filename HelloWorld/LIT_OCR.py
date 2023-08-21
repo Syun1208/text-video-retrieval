@@ -25,9 +25,17 @@ class Faiss_OCR():
             pass
 
     def process_name_img(self, name: int):
+        """
+        Input: 231
+        Output 000231
+        """
         return "0"*(6-len(str(name))) + str(name)
 
     def convert_idx_to_path(self,idx_image):
+        """
+        Input: 204 (indx of image in txt file)
+        Output: data/Keyframe_C00/C00_V0000/004431.jpg
+        """
         path_arr = []
         for idx in idx_image:
             path = f"{self.root_img}/{self.df_ocr[0][idx]}/{self.process_name_img(self.df_ocr[1][idx])}.jpg"
@@ -55,6 +63,7 @@ def main():
     text = "tphcm trẻ mắc bệnh tay chân miệng tăng gấp lần trong một tháng"
     idx_image = faiss_search.text_search(text, k=9)
     print(idx_image)
+    # Output: ['data/KeyFramesC00_V00/C00_V0000/004943.jpg', 'data/KeyFramesC00_V00/C00_V0000/004886.jpg', 'data/KeyFramesC00_V00/C00_V0000/004753.jpg', ...]
 
 if __name__ == "__main__":
     main()
