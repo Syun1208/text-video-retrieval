@@ -6,6 +6,7 @@ import pandas as pd
 import re
 import os
 import sys
+import time
 from pathlib import Path
 from langdetect import detect, DetectorFactory
 
@@ -21,14 +22,23 @@ WORK_DIR = os.path.dirname(ROOT)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 DetectorFactory.seed = 0
 
+def time_complexity(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        results = func(*args, **kwargs)
+        print('Time inference of {} and ocr: {}'.format(args[0].mode, time.time() - start))
+        return results
+    return wrapper
+
 class OCRSearch:
-    def __init__(self, bin_file=os.path.join(WORK_DIR, 'models/faiss_ocr.bin'), info_file=os.path.join(WORK_DIR, 'data/dicts/info_ocr_loc.txt') , root_img=os.path.join(WORK_DIR, 'data/news'), mode = "lit"):
+    def __init__(self, bin_file=os.path.join(WORK_DIR, 'models/faiss_ocr.bin'), info_file=os.path.join(WORK_DIR, 'data/dicts/info_ocr_loc.txt') , root_img='data/news', mode = "lit"):
         self.df_ocr = pd.read_csv(info_file, delimiter=",", header=None)
         self.translate = Translation()
         self.index = None
+        self.mode = mode
         self.root_img = root_img
 
-        if mode == "lit":
+        if self.mode == "lit":
             os.system('TF_CPP_MIN_LOG_LEVEL=0')
             self.lit_model = models.get_model("LiT-B16B")
             self.lit_var = self.lit_model.load_variables()
@@ -56,7 +66,7 @@ class OCRSearch:
 
     def load_bin_file(self, bin_file=os.path.join(WORK_DIR, 'models/faiss_ocr.bin')):
         self.index = faiss.read_index(bin_file)
-    
+    @time_complexity
     def text_search(self, text, k = 9):
         if detect(text) == 'vi':
             text = self.translate(text)

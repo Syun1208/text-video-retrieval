@@ -27,7 +27,7 @@ def time_complexity(func):
     def wrapper(*args, **kwargs):
         start = time.time()
         results = func(*args, **kwargs)
-        print('Time inference of {}: {}'.format(args[0].model, time.time() - start))
+        print('Time inference of {} and asr: {}'.format(args[0].mode, time.time() - start))
         return results
     return wrapper
 
@@ -35,9 +35,9 @@ def time_complexity(func):
 class ASRSearch(Translation):
     def __init__(self, dict_bert_search = os.path.join(WORK_DIR, 'data/dicts/keyframes_id_bert.json'), bin_file = os.path.join(WORK_DIR, 'models/faiss_asr.bin'), mode = "lit"):
         self.index = None
-        self.model = 'asr'
+        self.mode = mode
         self.id2img_fps = self.load_json_file(dict_bert_search)
-        if mode == "lit":
+        if self.mode == "lit":
             os.system('TF_CPP_MIN_LOG_LEVEL=0')
             self.lit_model = models.get_model("LiT-B16B")
             self.lit_var = self.lit_model.load_variables()
@@ -72,6 +72,7 @@ class ASRSearch(Translation):
     def text_search(self, text, k):
         if detect(text) == "vi":
             text = self.translate(text)
+        if self.mode == 'lit':
             print("Text translation: ", text)
             tokens = self.tokenizer([text])
             _, text_features, _ = self.lit_model.apply(self.lit_var, tokens=tokens)
@@ -79,8 +80,8 @@ class ASRSearch(Translation):
             idx_image = idx_image.flatten()
             infos_query = list(map(self.id2img_fps.get, list(idx_image)))
             image_paths =  [os.path.join(info['video_path'],f"{info['list_shot_id'][0]}.jpg") for info in infos_query]
-            image_paths = [img_path.replace('data', 'data/news') for img_path in image_paths]
-            return scores, idx_image, image_paths
+            image_paths = [img_path.replace('Database', 'data/news') for img_path in image_paths]
+        return scores, idx_image, image_paths
 
 
 def main():

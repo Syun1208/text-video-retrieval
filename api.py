@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import uvicorn
+import time
 import socket
 import base64
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -61,6 +62,42 @@ class MultiProcess(Thread):
 
     def run(self):
         self.scores, self.idx_image, self.image_paths = self.target(self.text, self.k)
+def multi_processing(text, k):
+    list_image_paths = []
+    list_scores = []
+
+    ocr_process = MultiProcess(target=ocr.text_search, args=(text, k))
+    asr_process = MultiProcess(target=asr.text_search, args=(text, k))
+    base_process = MultiProcess(target=base.text_search, args=(text, k))
+    image_captioning_process = MultiProcess(target=image_captioning.text_search, args=(text, k))
+
+    ocr_process.start()
+    asr_process.start()
+    base_process.start()
+    image_captioning_process.start()
+
+    ocr_process.join()
+    asr_process.join()
+    base_process.join()
+    image_captioning_process.join()
+
+    # Concatenate lists of scores and image paths
+    list_image_paths = ocr_process.image_paths + asr_process.image_paths + base_process.image_paths + image_captioning_process.image_paths
+    list_scores = ocr_process.scores[0].tolist() + asr_process.scores[0].tolist() + base_process.scores[0].tolist() + image_captioning_process.scores[0].tolist()
+    
+    return list_scores, list_image_paths
+
+def sequential_process(text, k):
+    scores_ic, idx_image_ic, image_paths_ic = image_captioning.text_search(text=text, k=k)
+    scores_base, idx_image_base, image_paths_base = base.text_search(text=text, k=k)
+    scores_ocr, idx_image_ocr, image_paths_ocr = ocr.text_search(text=text, k=k)
+    scores_asr, idx_image_asr, image_paths_asr = asr.text_search(text=text, k=k)
+
+    # Concatenate lists of scores and image paths    
+    list_scores = scores_base[0].tolist() + scores_ic[0].tolist() + scores_asr[0].tolist() + scores_ocr[0].tolist()
+    list_image_paths = image_paths_base + image_paths_ocr + image_paths_ic + image_paths_asr
+
+    return list_scores, list_image_paths
 
 def image_to_base64(image):
     """
@@ -145,34 +182,16 @@ async def image2text_search(request: UserRequest):
 
 @app.post('/combine_search')
 async def combine_search(request: UserRequest):
-    list_image_paths = []
-    list_scores = []
 
-    ocr_process = MultiProcess(target=ocr.text_search, args=(request.text, request.k))
-    asr_process = MultiProcess(target=asr.text_search, args=(request.text, request.k))
-    base_process = MultiProcess(target=base.text_search, args=(request.text, request.k))
-    image_captioning_process = MultiProcess(target=image_captioning.text_search, args=(request.text, request.k))
-
-    ocr_process.start()
-    asr_process.start()
-    base_process.start()
-    image_captioning_process.start()
-
-    ocr_process.join()
-    asr_process.join()
-    base_process.join()
-    image_captioning_process.join()
-
-    # Concatenate lists of scores and image paths
-    list_image_paths = ocr_process.image_paths + asr_process.image_paths + base_process.image_paths + image_captioning_process.image_paths
-    list_scores = ocr_process.scores[0].tolist() + asr_process.scores[0].tolist() + base_process.scores[0].tolist() + image_captioning_process.scores[0].tolist()
+    list_scores, list_image_paths = sequential_process(text=request.text, k=request.k)
     # Remove duplicated image paths
     list_image_paths_nonduplicate = list(set(list_image_paths))
     list_idx_image_paths = [list_image_paths.index(string) for string in list_image_paths_nonduplicate]
+    list_image_paths = list_image_paths_nonduplicate
     list_scores = [list_scores[idx] for idx in list_idx_image_paths]
     # Sort concatenated lists
-    list_scores = sorted(list_scores)
-    idx_sorted_scores = [i for i, x in sorted(enumerate(list_scores), key=lambda x: x[1])]
+    list_scores = sorted(list_scores, reverse=True)
+    idx_sorted_scores = [i for i, x in sorted(enumerate(list_scores), key=lambda x: x[1], reverse=True)]
     list_image_paths = [list_image_paths[i] for i in idx_sorted_scores]
     # Find top K maximum of the sorted lists
     max_scores, max_image_paths = list_scores[:request.k], list_image_paths[:request.k]
@@ -197,31 +216,28 @@ def test():
         Chuyển cảnh cuộc phổng vấn một nhóm người đang chuẩn bị trải nghiệm với một khí cầu. \
         Đại diện cho nhóm là người đàn ông đeo kính khoác một chiếc áo đỏ đen trả lời phỏng vấn về sự kiện này.'
     k = 9
-    list_image_paths = []
-    list_scores = []
 
-    ocr_process = MultiProcess(target=ocr.text_search, args=(text, k))
-    asr_process = MultiProcess(target=asr.text_search, args=(text, k))
-    base_process = MultiProcess(target=base.text_search, args=(text, k))
-    image_captioning_process = MultiProcess(target=image_captioning.text_search, args=(text, k))
+    # start_multi = time.time()
+    # list_scores, list_image_paths = multi_processing(text, k)
+    # # Remove duplicated image paths
+    # list_image_paths_nonduplicate = list(set(list_image_paths))
+    # list_idx_image_paths = [list_image_paths.index(string) for string in list_image_paths_nonduplicate]
+    # list_scores = [list_scores[idx] for idx in list_idx_image_paths]
+    # # Sort concatenated lists
+    # list_scores = sorted(list_scores)
+    # idx_sorted_scores = [i for i, x in sorted(enumerate(list_scores), key=lambda x: x[1])]
+    # list_image_paths = [list_image_paths[i] for i in idx_sorted_scores]
+    # # Find top K maximum of the sorted lists
+    # max_scores, max_image_paths = list_scores[:k], list_image_paths[:k]
+    # results = {'scores': max_scores, 'image_paths': max_image_paths}
+    # print('Time of multi-processing: ', time.time() - start_multi)
 
-    ocr_process.start()
-    asr_process.start()
-    base_process.start()
-    image_captioning_process.start()
-
-    ocr_process.join()
-    asr_process.join()
-    base_process.join()
-    image_captioning_process.join()
-
-    # Concatenate lists of scores and image paths
-    print(ocr_process.image_paths , asr_process.image_paths , base_process.image_paths , image_captioning_process.image_paths)
-    list_image_paths = ocr_process.image_paths + asr_process.image_paths + base_process.image_paths + image_captioning_process.image_paths
-    list_scores = ocr_process.scores[0].tolist() + asr_process.scores[0].tolist() + base_process.scores[0].tolist() + image_captioning_process.scores[0].tolist()
+    start_sq = time.time()
+    list_scores, list_image_paths = sequential_process(text, k)
     # Remove duplicated image paths
     list_image_paths_nonduplicate = list(set(list_image_paths))
     list_idx_image_paths = [list_image_paths.index(string) for string in list_image_paths_nonduplicate]
+    list_image_paths = list_image_paths_nonduplicate
     list_scores = [list_scores[idx] for idx in list_idx_image_paths]
     # Sort concatenated lists
     list_scores = sorted(list_scores)
@@ -230,9 +246,10 @@ def test():
     # Find top K maximum of the sorted lists
     max_scores, max_image_paths = list_scores[:k], list_image_paths[:k]
     results = {'scores': max_scores, 'image_paths': max_image_paths}
-    print(results)
+    print('Time of sequential process: ', time.time() - start_sq)
+    
 
 
 if __name__ == '__main__':
-    # uvicorn.run('api:app', host='0.0.0.0', port=8090, reload=True, workers=2)
-    test()
+    uvicorn.run('api:app', host='0.0.0.0', port=8090, reload=True, workers=2)
+

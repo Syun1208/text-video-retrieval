@@ -41,7 +41,7 @@ def time_complexity(func):
     def wrapper(*args, **kwargs):
         start = time.time()
         results = func(*args, **kwargs)
-        print('Time inference of {}: {}'.format(args[0].mode, time.time() - start))
+        print('Time inference of {} and base line: {}'.format(args[0].mode, time.time() - start))
         return results
     return wrapper
 

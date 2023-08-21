@@ -14,6 +14,7 @@ import json
 import faiss
 import math
 import torch
+import time
 from pathlib import Path
 from vit_jax import models
 
@@ -29,6 +30,15 @@ ROOT = Path(os.path.abspath(ROOT))  # relative
 WORK_DIR = os.path.dirname(ROOT)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 DetectorFactory.seed = 0
+
+def time_complexity(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        results = func(*args, **kwargs)
+        print('Time inference of {} and image captioning: {}'.format(args[0].mode, time.time() - start))
+        return results
+    return wrapper
+
 
 class ImageCaptioningSearch(Translation):
   def __init__(self, root_database=os.path.join(WORK_DIR, 'data/news'), json_path=os.path.join(WORK_DIR, 'data/dicts/keyframes_id.json'), mode='lit'):
@@ -69,7 +79,7 @@ class ImageCaptioningSearch(Translation):
 
     plt.show()
 
-
+  @time_complexity
   def image_search(self, id_query, k):
     query_feats = self.index.reconstruct(id_query).reshape(1,-1)
 
@@ -81,6 +91,7 @@ class ImageCaptioningSearch(Translation):
 
     return scores, idx_image, infos_query, image_paths
 
+  @time_complexity
   def text_search(self, text, k):
     if detect(text) == 'vi':
         text = Translation.__call__(self, text)
