@@ -1,0 +1,14 @@
+faiss-gpu
+numpy
+fastapi[all]
+uvicorn[standard]
+ftfy 
+regex 
+tqdm
+langdetect
+pydantic
+sorting
+typing-extensions
+googletrans==3.1.0a0
+translate
+tensorrt
