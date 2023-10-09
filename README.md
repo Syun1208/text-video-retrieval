@@ -1,23 +1,27 @@
+# OCR
 
 ```
-Folder data
-        |--> dicts
-                |--> *.txt
-                |--> *.json
-
-        |--> news
-                |--> KeyframesC00_V00
-                        |--> C00_V0000
-                                |--> *.jpg
-                        |--> C00_V0000
-                |--> KeyframesC00_V01
-                
-Folder models
-        |--> clip_features
-                |--> KeyFramesC00_V00
-                        |--> C00_V0000.npy
-                        |--> C00_V0001.npy
-
-        |--> lit_features
-        |--> *.bin
+|---data
+|---news_aic2023
+|   │   |--Keyframes_L01
+|   |   |       |--L01_V001
+|   |   |               |-- *.jpg
+|   |   |       |--L01_V002
+|   │   |--Keyframes_L02
+|
+|---dicts
+|   |--data_ocr
+|           |--Keyframes_L01
+|                   |--Keyframes_L01.txt
+|                   |--L01_V00*.txt
+|           |--Keyframes_L02
+|   |--info_ocr.txt
+|
+|---model
+|   |--*.bin
+|
+|---README.md
 ```
+
+
+# References
