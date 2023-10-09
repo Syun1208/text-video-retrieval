@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="image/250736253_1866157563594189_8452833289710235856_n.jpg">
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"
+        integrity="sha512-csNcFYJniKjJxRWRV1R7fvnXrycHP6qDR21mgz1ZP55xY5d+aHLfo9/FcGDQLfn2IfngbAHd8LdfsagcCqgTcQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"
+        integrity="sha512-57oZ/vW8ANMjR/KQ6Be9v/+/h6bq9/l3f0Oc7vn6qMqyhvPd1cvKBRWWpzu0QoneImqr2SkmO4MSqU+RpHom3Q=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    </script>
+    <title>UTE-AI Fluc</title>
+    <style type="text/css">
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,400;1,500&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            line-height: 1.6;
+        }
+
+        input {
+            border-radius: 32px;
+            padding: 10px 20px;
+            width: 100%;
+            outline: none;
+            border: 1px solid #9ea8ab;
+            width: 500px;
+            margin-left: 10px;
+        }
+
+        button {
+            padding: 0 32px;
+            height: 45px;
+            border-radius: 32px;
+            text-align: center;
+            transition: all .3s ease;
+            position: relative;
+            display: inline-block;
+            box-shadow: inset 2px 2px 2px 0px hsla(0, 0%, 100%, .5), 7px 7px 20px 0px rgba(0, 0, 0, .1), 4px 4px 5px 0px rgba(0, 0, 0, .1);
+            outline: none;
+            background: linear-gradient(92.18deg, #00acd7 5.74%, #005cc9 98.17%);
+            color: #fff;
+            --color--primary: #00acd7;
+            border: none;
+        }
+
+        button:hover {
+            opacity: 0.5;
+        }
+
+        select {
+            padding: 0 32px;
+            height: 45px;
+            border-radius: 32px;
+            transition: all .3s ease;
+            margin: 20px;
+            --color--primary: #00acd7;
+            border: none;
+        }
+
+        .finalDiv {
+            @media screen and (min-width: 1200px) {
+                justify-content: space-around !important;
+            }
+
+
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: bold;
+            text-align: 40px 0 60px 0;
+            margin: 40px 0 60px 0;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+        }
+
+        table th,
+        table td {
+            width: 50px;
+            padding: 5px;
+            border: 0.5px solid black;
+
+
+        }
+
+        .GFG {
+            color: green;
+        }
+
+        .OK {
+            font-size: 18px;
+        }
+
+        #myBtn {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            /* Fixed/sticky position */
+            bottom: 20px;
+            /* Place the button at the bottom of the page */
+            right: 30px;
+            /* Place the button 30px from the right */
+            z-index: 99;
+            /* Make sure it does not overlap */
+            border: none;
+            /* Remove borders */
+            outline: none;
+            /* Remove outline */
+            background-color: red;
+            /* Set a background color */
+            color: white;
+            /* Text color */
+            cursor: pointer;
+            /* Add a mouse pointer on hover */
+            padding: 15px;
+            /* Some padding */
+            border-radius: 10px;
+            /* Rounded corners */
+            font-size: 18px;
+            /* Increase font size */
+        }
+
+        #myBtn:hover {
+            background-color: #555;
+            /* Add a dark-grey background on hover */
+        }
+
+        .floatTable {
+            display: inline-block;
+            vertical-align: top;
+            /* Optional: Align the top edges of the tables */
+            margin-right: 20px;
+            /*/* Optional: Add some space between tables */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Text-Video Retrieval</h1>
+    <input type="text" id="search-input" placeholder="Query text">
+    <input type="text" id="image-id" placeholder="image id" style="width: 200px !important;">
+    <select id="pet-select">
+        <option value="">--Please choose an option--</option>
+        <option value="ocr">ocr</option>
+        <option value="image captioning">image captioning</option>
+        <option value="clip-v32">clip v32</option>
+        <!-- <option value="clip-v16">clip</option> -->
+        <option value="clip-v14">clip v14</option>
+        <option value="blip">blip</option>
+        <option value="lit">lit</option>
+        <option value="crtF">crtF</option>
+
+        <!-- <option value="asr">asr</option> -->
+    </select>
+
+    <button id="search-button">Search</button>
+    <!-- <button id="search-button1">Search</button> -->
+
+    <input type="text" id="csvName" placeholder="tên file tải xuống" style="width: 200px !important;">
+
+    <button id="downloadCSV">Download CSV</button>
+    <button id="submitBtn">Submit</button>
+    <button id="show-more-button">Show more</button>
+    <!-- Divined two div into two colum -->
+    <div class="clearfix">
+        <!-- align two tables in one row? -->
+        <table id="GFG" style="border-radius: 0.375rem; border-spacing: 2px; border-color: gray;">
+            <tr style="background-color: rgba(13,110,253)   ;
+            --bs-bg-opacity: 1;">
+                <td>
+                    id
+                </td>
+                <td>
+                    videoName
+                </td>
+                <td>
+                    frameId
+                </td>
+                <td>
+                    sampleImage
+                </td>
+                <td>
+                    remove row
+                </td>
+            </tr>
+
+        </table>
+        <!-- outline for groups -->
+
+    </div>
+    <div id="showResult">
+
+    </div>
+    <div id="search-results" class="finalDiv"
+        style="display: flex;   flex-wrap: wrap; justify-content: center; margin-left: 10px; margin-right: 10px; ">
+
+
+    </div>
+    <!-- Back to top button -->
+    <button onclick="topFunction()" id="myBtn" title="Go to top">
+        <!-- change to arrowKey -->
+        <svg viewBox="64 64 896 896" focusable="false" data-icon="vertical-align-top" width="1em" height="1em"
+            fill="currentColor" aria-hidden="true">
+            <path
+                d="M859.9 168H164.1c-4.5 0-8.1 3.6-8.1 8v60c0 4.4 3.6 8 8.1 8h695.8c4.5 0 8.1-3.6 8.1-8v-60c0-4.4-3.6-8-8.1-8zM518.3 355a8 8 0 00-12.6 0l-112 141.7a7.98 7.98 0 006.3 12.9h73.9V848c0 4.4 3.6 8 8 8h60c4.4 0 8-3.6 8-8V509.7H624c6.7 0 10.4-7.7 6.3-12.9L518.3 355z">
+            </path>
+        </svg>
+    </button>
+    <script>
+        const formEl = document.querySelector("form")
+        const inputData = document.getElementById("search-input")
+        const searchResults = document.querySelector(".search-results")
+        const showMore = document.getElementById("show-more-button")
+        const imageId = document.getElementById("image-id")
+        const searchButton = document.getElementById("search-button")
+
+        var loc = window.location.pathname
+        var dir = loc.substring(0, loc.lastIndexOf('/'))
+        const baseDir = '/media/hoangtv/New Volume/backup/'
+
+        let page = 1;
+
+        var dataforDownLoadCSV = [
+
+        ];
+
+        let mybutton = document.getElementById("myBtn");
+
+        // When the user scrolls down 20px from the top of the document, show the button
+        window.onscroll = function () { scrollFunction() };
+
+        function scrollFunction() {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                mybutton.style.display = "block";
+            } else {
+                mybutton.style.display = "none";
+            }
+        }
+
+        // When the user clicks on the button, scroll to the top of the document
+        function topFunction() {
+            document.body.scrollTop = 0; // For Safari
+            document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+        }
+        $(document).ready(function () {
+
+            // $('#search-button1').click(() => {
+            //     $("#search-results").children().remove();
+
+            // })
+
+            $("#search-button").click(async function () {
+                var searchButton = $('#search-button').css('opacity', '0.5')
+                // disable button
+                $("#search-button").prop('disabled', true);
+                // if #CFG more than two row remove all row except first row
+                if ($("#GFG tr").length > 2) {
+                    $("#GFG tr").slice(1).remove();
+                }
+                $("#search-results").children().remove();
+                const url = 'http://localhost:8090/text_search';
+
+                const headers = {
+                    'accept': 'application/json',
+                    'Content-Type': 'application/json'
+                };
+                var selectedValue = $("#pet-select").val();
+                if (selectedValue == "crtF") {
+                    const req = await fetch(`http://localhost:3123/${inputData.value}`, {
+                        method: 'GET',
+                    })
+                    const res = await req.json()
+                    console.log(res)
+                    // sample response 
+                    //                     {
+                    //     "text": " world healthazer world health organization organization organisation organization ulton whitman mundial de la solud lowked mondiale dola sante world orld health organ organization maria van kerkhove technical lead covid19 organization mendialedalusantic gencies thanh hóa được công nhận là cây di sản việt nam xã hà nội: khai mạc hội báo xuân quý mã",
+                    //     "videoName": "L04_V012",
+                    //     "frameId": "015620"
+                    // }
+                    // sameple img src http://localhost:4545/static/Keyframes_L11/L11_V023/006697.jpg
+                    // push to table
+                    $("#GFG").append(`<tr> <td>0</td> <td>${res.videoName}</td> <td>${res.frameId}</td> <td> <img src="http://localhost:4545/static/Keyframes_${res.videoName.split("_")[0]}/${res.videoName}/${res.frameId}.jpg" style="width:100px; height:100px" />  </td> <td  class="removeRow" > removeRow </td></tr>`);
+                    dataforDownLoadCSV.push([res.videoName, res.frameId]);
+                    var searchButton = $('#search-button').css('opacity', '1')
+                    $("#search-button").prop('disabled', false);
+
+                    return;
+                }
+                const data = {
+                    text: inputData.value,
+                    image_id: Number(imageId.value),
+                    image_path: "afsafaf",
+                    k: 100,
+                    mode_search: selectedValue,
+                    base64_optional: false,
+                    submit_name: "query-1"
+                };
+                const requestOptions = {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(data)
+                };
+                var searchButton = $('#search-button').css('opacity', '0')
+                const response = await fetch(url, requestOptions)
+                const bodyData = await response.json()
+                //                 {
+                //     "image_paths": [
+                //         "data/Keyframes_L07/L07_V027/026958.jpg",
+                //         "data/Keyframes_L07/L07_V022/028354.jpg",
+                //         "data/Keyframes_L03/L03_V024/034652.jpg",
+                //         "data/Keyframes_L03/L03_V018/024952.jpg",
+                //         "data/Keyframes_L08/L08_V026/029656.jpg",
+                //         "data/Keyframes_L05/L05_V025/019740.jpg",
+                //         "data/Keyframes_L05/L05_V025/019696.jpg",
+                //         "data/Keyframes_L16/L16_V008/030174.jpg",
+                //         "data/Keyframes_L12/L12_V010/014527.jpg",
+                //         "data/Keyframes_L01/L01_V002/017591.jpg",
+                //     ],
+                // }
+                // Group the bodyData.image_paths into groups of L07_V027
+                var groups = bodyData.image_paths.reduce(function (r, o) {
+                    var key = o.split('/')[2];
+                    if (!r[key]) r[key] = [];
+                    r[key].push(o);
+                    return r;
+                }, {});
+                let pattern = /data\//g;
+                // Push with id "myDiv" and add the new element to the div with id "myDiv"
+                for (const [key, value] of Object.entries(groups)) {
+                    // Push all value array into div with id "myDiv"
+                    var keyElement = $(`<div style="width: 100%; height: 100px;border: 1px solid DeepSkyBlue; border-radius: 30px;     position:relative; margin-bottom: 10px; margin-top: 10px;" class="headerClick" > <h1 ">${key}</h1> </div>`);
+                    $("#search-results").append(keyElement);
+
+                    for (let i = 0; i < value.length; i++) {
+                        let replacement = "";
+                        let outputString = value[i].replace(pattern, replacement);
+                        var newElement = $(`<div style="width: 400px;border: 1px solid DeepSkyBlue; border-radius: 30px;     position:relative; margin-bottom: 25px; margin-top: 25px;" class="smallEle" > <img style="width: 100%; border-radius:30px;height: 100%;" src="http://localhost:4545/static/${outputString}" alt="" /> </div>`);
+                        $("#search-results").append(newElement);
+                    }
+
+
+                }
+
+                // bodyData.image_paths.map((data, idx) => {
+                //     let pattern = /data\//g;
+                //     let replacement = "";
+                //     let outputString = data.replace(pattern, replacement);
+                //     var newElement = $(`<div style="width: 500px;border: 1px solid DeepSkyBlue; border-radius: 30px;     position:relative; margin-bottom: 25px; margin-top: 25px;" class="smallEle" > <img style="width: 100%; border-radius:30px;height: 100%;" src="http://localhost:4545/static/${outputString}" alt="" /> </div>`);
+
+                //     // Append the new element to the div with id "myDiv"
+                //     $("#search-results").append(newElement);
+                // })
+                var searchButton = $('#search-button').css('opacity', '1')
+                $("#search-button").prop('disabled', false);
+
+
+            })
+            $('#search-results').on('click', '.smallEle', function () {
+                var ele = $(this).find('img')
+                var srcAttribute = ele.attr('src');
+                $(this).css('opacity', '0.5')
+                $(this).append(`<img style="position:absolute; left:0;border-radius:30px; width:30px" id="123" src="https://media.istockphoto.com/id/1313547780/vector/profile-verification-check-marks-icons-vector-illustration.jpg?s=612x612&w=0&k=20&c=XDWxGC05gd-sTn_cBvlI2aG1onqOdiVdPb0IeFO-Q2M=" />`)
+                var parts = srcAttribute.split('/');
+
+
+                var tempfileId = parts[parts.length - 1].split('.'); // 2sc position
+                var fileId = tempfileId[tempfileId.length - 2]
+                var fileName = parts[parts.length - 2] // 1st position
+                var isDifferent = true;
+                var position
+                for (var i = 0; i < dataforDownLoadCSV.length; i++) {
+                    // Assuming the file name is in the first column (index 0)
+                    if (dataforDownLoadCSV[i][0] === fileName && dataforDownLoadCSV[i][1] === fileId) {
+                        position = i
+                        isDifferent = false;
+                        break; // No need to continue checking
+                    }
+                }
+                if (isDifferent) {
+                    // add new Row base on dataforDownLoadCSV
+                    $("#GFG").append(`<tr> <td>${dataforDownLoadCSV.length}</td> <td>${fileName}</td> <td>${fileId}</td> <td> <img src=${ele.attr("src")} style="width:100px; height:100px" />  </td> <td  class="removeRow" > removeRow </td></tr>`);
+                    dataforDownLoadCSV.push([fileName, fileId]);
+                } else {
+                    // Remove row base on dataforDownLoadCSV[position]
+                    $("#GFG tr").each(function () {
+                        var value = $(this).find("td")
+                        if (value[1].innerHTML === fileName && value[2].innerHTML === fileId) {
+                            $(this).remove();
+                        }
+                    })
+
+                    $(this).css('opacity', '1')
+                    let allTag = $(this).find(
+                        "img"
+                    )
+                    for (let i = 1; i < allTag.length; i++) {
+                        allTag[i].remove()
+                    }
+                    dataforDownLoadCSV = dataforDownLoadCSV.slice(0);
+                    dataforDownLoadCSV.splice(position, 1);
+
+                }
+            });
+            $("#downloadCSV").click(function () {
+                // Sample data (replace with your data)
+                // Create a CSV string
+                var csvContent = "data:text/csv;charset=utf-8,";
+                console.log(dataforDownLoadCSV)
+                // remove ['\n                fileName\n            ', '\n                frameId\n            ']
+                // Create a data URI for the CSV content
+                dataforDownLoadCSV.shift()
+                dataforDownLoadCSV.forEach(function (rowArray) {
+                    var row = rowArray.join(",");
+                    csvContent += row + "\r\n";
+                });
+
+                var encodedUri = encodeURI(csvContent);
+
+                // Create a temporary <a> element to trigger the download
+                var link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                var fileName = document.getElementById("csvName").value
+                link.setAttribute("download", `${fileName}.csv`);
+
+                // Simulate a click on the link to trigger the download
+                link.click();
+            });
+            // $(function () {
+            //     // Drag and drop table rows base on row id, fileName, fileId
+            //     $("#GFG").sortable({
+            //         items: 'tr:not(tr:first-child)',
+            //         dropOnEmpty: false,
+            //         start: function (G, ui) {
+            //             ui.item.addClass("select");
+            //         },
+            //         stop: function (G, ui) {
+            //             ui.item.removeClass("select");
+            //             // Change dataDownloadForCSV
+            //             var data = [];
+
+            //             // Do not get first row
+            //             $("#GFG tr").each(function () {
+            //                 var value = $(this).find("td")
+            //                 if (value[0].innerHTML !== "id") {
+            //                     data.push([value[1].innerHTML, value[2].innerHTML]);
+            //                 }
+            //             })
+            //             dataforDownLoadCSV = data.slice(0);
+
+            //         }
+
+            //     });
+            // });
+            $('#search-results').on('click', '.headerClick', function () {
+                var ele = $(this).find('h1')
+                var srcAttribute = ele.text();
+                var allSmallEle = $(this).nextUntil('.headerClick')
+                if (allSmallEle.css('display') === 'none') {
+                    allSmallEle.css('display', 'flex')
+                } else {
+                    allSmallEle.css('display', 'none')
+                }
+            });
+
+            $('#GFG').on('click', '.removeRow', function () {
+                var ele = $(this).parent()
+                var fileName = ele.find('td')[1].innerHTML
+                var fileId = ele.find('td')[2].innerHTML
+                var allSmallEle = $('#search-results').find('.smallEle')
+                for (let i = 0; i < allSmallEle.length; i++) {
+                    var srcAttribute = $(allSmallEle[i]).find('img').attr('src');
+                    var parts = srcAttribute.split('/');
+                    var tempfileId = parts[parts.length - 1].split('.'); // 2sc position
+                    var tempFileId = tempfileId[tempfileId.length - 2]
+                    var tempFileName = parts[parts.length - 2] // 1st position
+                    if (tempFileName === fileName && tempFileId === fileId) {
+                        $(allSmallEle[i]).css('opacity', '1')
+                        let allTag = $(allSmallEle[i]).find(
+                            "img"
+                        )
+                        for (let i = 1; i < allTag.length; i++) {
+                            allTag[i].remove()
+                        }
+                    }
+                }
+                // Remove row base on dataforDownLoadCSV[position]
+                $("#GFG tr").each(function () {
+                    var value = $(this).find("td")
+                    if (value[1].innerHTML === fileName && value[2].innerHTML === fileId) {
+                        $(this).remove();
+                    }
+                })
+                dataforDownLoadCSV = dataforDownLoadCSV.slice(0);
+                var position
+                for (var i = 0; i < dataforDownLoadCSV.length; i++) {
+                    // Assuming the file name is in the first column (index 0)
+                    if (dataforDownLoadCSV[i][0] === fileName && dataforDownLoadCSV[i][1] === fileId) {
+                        position = i
+                        break; // No need to continue checking
+                    }
+                }
+                dataforDownLoadCSV.splice(position, 1);
+            });
+            $('#submitBtn').click(async () => {
+                // send post req to https://eventretrieval.one/api/v1/login  
+                // with body {username: "admin", password: "admin"} 
+                // to get token
+                // Disable button and change to submmiting
+                $('#submitBtn').prop('disabled', true);
+                $('#submitBtn').text('Submitting...');
+                $.ajax({
+                    url: "https://eventretrieval.one/api/v1/login",
+                    type: "POST",
+                    data: JSON.stringify({
+                        username: "uteaifluc",
+                        password: "pohbo1Ph"
+                    }),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function (data) {
+                        // console.log(data)
+                        // send post req to https://eventretrieval.one/api/v1/submit 
+                        // with body {token: "token", data: dataforDownLoadCSV} 
+                        // to get token
+                        console.log(dataforDownLoadCSV)
+                        // dataSubmit is a second row in table
+                        if (dataforDownLoadCSV[0][0] === "\n                    videoName\n                ") {
+                            dataforDownLoadCSV.shift()
+                        }
+
+
+                        $.ajax({
+                            url: `https://eventretrieval.one/api/v1/submit?session=${data.sessionId}&item=${dataforDownLoadCSV[0][0]}&frame=${dataforDownLoadCSV[0][1]}`,
+                            success: function (data) {
+                                // clear after append
+                                $("#showResult").children().remove();
+                                $("#showResult").append(`
+                                <div>
+                                    <h1>Result</h1>
+                                    <p> ${JSON.stringify(data)}</p>`)
+                                // Enable button and change to submmit
+                                $('#submitBtn').prop('disabled', false);
+                                $('#submitBtn').text('Submit');
+                            },
+                            error: function (err) {
+                                $("#showResult").children().remove();
+
+                                $("#showResult").append(`
+                                <div>
+                                    <h1>Result</h1>
+                                    <p> ${JSON.stringify(err)}</p>`)
+                                $('#submitBtn').prop('disabled', false);
+                                $('#submitBtn').text('Submit');
+                            }
+                        })
+                    },
+                    error: function (err) {
+
+                        console.log(err)
+                    }
+                });
+            })
+
+        })
+    </script>
+</body>
+
+</html>

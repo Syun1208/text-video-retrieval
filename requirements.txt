@@ -1,0 +1,36 @@
+faiss-gpu
+numpy
+fastapi[all]
+uvicorn[standard]
+ftfy 
+regex 
+tqdm
+langdetect
+pydantic
+sorting
+typing-extensions
+googletrans==3.1.0a0
+translate
+jax
+jaxlib
+# tensorrt
+
+# absl-py>=0.12.0
+# aqtp!=0.1.1  # https://github.com/google/aqt/issues/196
+# chex>=0.0.7
+# clu>=0.0.3
+# einops>=0.3.0
+# flax>=0.6.4
+# git+https://github.com/google/flaxformer
+# jax[cuda11_cudnn82]>=0.4.2
+# --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+
+numpy>=1.19.5
+pandas>=1.1.0
+# tensorflow-cpu>=2.4.0  # Using tensorflow-cpu to have all GPU memory for JAX.
+# tensorflow-datasets>=4.0.1
+# tensorflow-probability>=0.11.1
+# tensorflow-text>=2.9.0
+timm==0.4.12 
+fairscale==0.4.4
+cleanvision
